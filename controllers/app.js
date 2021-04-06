@@ -1,24 +1,41 @@
+// Load modules
 var http = require('http');
 var fs = require('fs');
 var path = require('path');
 var url = require("url");
 
-const hostname = '127.0.0.1';
+// CONSTANTS
+// host variables
+const hostname = 'localhost';
 const port = 3000;
+// available APIs
+const apis = ['/updatePoints', '/getPoints', '/getQuestionNumber', '/putQuestionNumber'];
 
+// STORED VARIABLES
 var totalPoints = 0;
 var questionNumber = 0;
-const serveMethods = ['/updatePoints', '/getPoints', '/getQuestionNumber', '/putQuestionNumber'];
+var welcomePage = true;
+var session;
 
+// CREATE SERVER
 const server = http.createServer(function (request, response) {
     console.log('request ', request.url, ' method ', request.method);
 
-    if (!serveMethods.includes(request.url)) {
+    // CHECK INCOMING REQUEST
+    
+    // If not APIs, then redirect
+    if (!apis.includes(request.url)) {
         var filePath = '.' + request.url;
-        if (filePath == './') {
-            totalPoints = 0;
-            questionNumber = 0;
+
+        if (welcomePage) {
             filePath = './views/home.html';
+            welcomePage = false;
+        } else {
+            if (filePath === './' || filePath.includes('/quiz.html')) {
+                totalPoints = 0;
+                questionNumber = 0;
+                filePath = './views/quiz.html';
+            }
         }
 
         var extname = String(path.extname(filePath)).toLowerCase();
@@ -60,23 +77,28 @@ const server = http.createServer(function (request, response) {
                 response.end(content, 'utf-8');
             }
         });
+    // else respond to APIs
     } else {
         var resBody;
 
         const { headers, method, url } = request;
         let body = [];
+        
+        // handle error
         request.on('error', (err) => {
             console.error(err);
+        // handle response
         }).on('data', (chunk) => {
             body.push(chunk);
         }).on('end', () => {
+            // convert json to a string
             body = Buffer.concat(body).toString();
-            // BEGINNING OF NEW STUFF
 
             response.on('error', (err) => {
                 console.error(err);
             });
 
+            // code for actions based on API
             if (request.method === 'PATCH' && request.url.includes('/updatePoints')) {
                 console.log('body: ' + body);
                 var jsonObject = JSON.parse(body);
@@ -101,115 +123,14 @@ const server = http.createServer(function (request, response) {
                 console.log('questionNumber: ' + questionNumber);
             }
 
+            // prepare response and send
             response.statusCode = 200;
             response.setHeader('Content-Type', 'application/json');
-            // Note: the 2 lines above could be replaced with this next one:
-            // response.writeHead(200, {'Content-Type': 'application/json'})
 
             const responseBody = { headers, method, url, resBody };
 
             response.write(JSON.stringify(responseBody));
             response.end();
-            // Note: the 2 lines above could be replaced with this next one:
-            // response.end(JSON.stringify(responseBody))
-
-            // END OF NEW STUFF
         });
     }
-
-
 }).listen(port, hostname);
-
-
-// server.on('request', function (request, response) {
-//     if (request.url.includes('/updatePoints') || request.url.includes('/getPoints')) {
-//         var resBody;
-
-//         const { headers, method, url } = request;
-//         let body = [];
-//         request.on('error', (err) => {
-//             console.error(err);
-//         }).on('data', (chunk) => {
-//             body.push(chunk);
-//         }).on('end', () => {
-//             body = Buffer.concat(body).toString();
-//             // BEGINNING OF NEW STUFF
-
-//             response.on('error', (err) => {
-//                 console.error(err);
-//             });
-
-//             if (request.method === 'PATCH' && request.url.includes('/updatePoints')) {
-//                 totalPoints += parseInt(JSON.parse(body).points);
-//                 resBody = body;
-//             } else if (request.method === 'GET' && request.url.includes('/getPoints')) {
-//                 resBody = totalPoints;
-//             }
-
-//             response.statusCode = 200;
-//             response.setHeader('Content-Type', 'application/json');
-//             // Note: the 2 lines above could be replaced with this next one:
-//             // response.writeHead(200, {'Content-Type': 'application/json'})
-
-//             const responseBody = { headers, method, url, resBody };
-
-//             response.write(JSON.stringify(responseBody));
-//             response.end();
-//             // Note: the 2 lines above could be replaced with this next one:
-//             // response.end(JSON.stringify(responseBody))
-
-//             // END OF NEW STUFF
-//         });
-//     }
-// });
-
-// console.log('Server running at ' + hostname + '/' + port);
-
-
-
-// http.createServer((request, response) => {
-//     var resBody;
-
-//     const { headers, method, url } = request;
-//     let body = [];
-//     request.on('error', (err) => {
-//         console.error(err);
-//     }).on('data', (chunk) => {
-//         body.push(chunk);
-//     }).on('end', () => {
-//         body = Buffer.concat(body).toString();
-//         // BEGINNING OF NEW STUFF
-
-//         response.on('error', (err) => {
-//             console.error(err);
-//         });
-
-//         if (request.method === 'PATCH' && request.url.includes('/updatePoints')) {
-//             totalPoints += parseInt(JSON.parse(body).points);
-//             resBody = body;
-//         } else if (request.method === 'GET' && request.url.includes('/getPoints')) {
-//             resBody = totalPoints;
-//         }
-
-//         response.statusCode = 200;
-//         response.setHeader('Content-Type', 'application/json');
-//         // Note: the 2 lines above could be replaced with this next one:
-//         // response.writeHead(200, {'Content-Type': 'application/json'})
-
-//         const responseBody = { headers, method, url, resBody };
-
-//         response.write(JSON.stringify(responseBody));
-//         response.end();
-//         // Note: the 2 lines above could be replaced with this next one:
-//         // response.end(JSON.stringify(responseBody))
-
-//         // END OF NEW STUFF
-//     });
-
-
-// }).listen(8080, hostname); // Activates this server, listening on port 8080.
-// console.log('Server running at ' + hostname + '/' + 8080);
-
-// function setupResponse(code, body) {
-
-// }

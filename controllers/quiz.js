@@ -1,3 +1,4 @@
+// CONSTANTS 
 const boolAns = ['True', 'False'];
 
 window.onload = fillData(0);
@@ -20,10 +21,11 @@ function fillData(questNo) {
         var qAns = dataArray.possible_answers;
 
         document.getElementById("title").innerHTML = title;
-
+        // change question details
         document.getElementById("question").innerHTML = parseInt(questNo) + 1 + ') ' + qTitle;
         document.getElementById('image').src = qImgUrl;
 
+        // setup question answers
         if (qType == 'multiplechoice-single' || qType == 'multiplechoice-multiple') {
             var a = '';
 
@@ -38,14 +40,12 @@ function fillData(questNo) {
         }
 
         if (qType == 'truefalse') {
-
             var a = '';
             for (i = 0; i < 2; i += 1) {
                 a += '<tr id="answer' + i + '"><td>';
                 a += '<input type="checkbox" name="ans1" value="' + boolAns[i] + '">';
                 a += '<label for="vehicle1">' + boolAns[i] + '</label><br>';
                 a += '</td></tr>';
-
             }
 
             document.getElementById('answers').innerHTML = a;
@@ -53,7 +53,7 @@ function fillData(questNo) {
 
         var button = document.querySelector('button').disabled = false;
 
-
+        // setup logic for single multiple-choice and true/false choice type questions
         if (qType == 'multiplechoice-single' || qType == 'truefalse') {
             var divAns = document.getElementById("answers");
             var chks = divAns.getElementsByTagName("INPUT");
@@ -69,10 +69,18 @@ function fillData(questNo) {
         }
     };
     xhttp.send();
-
 }
 
 function showResult() {
+    document.getElementById('submitBtn').disabled = true;
+
+    // disable all check-boxes
+    var divAns = document.getElementById("answers");
+    var chks = divAns.getElementsByTagName("INPUT");
+    for (var i = 0; i < chks.length; i++) {
+        chks[i].disabled = true;
+    }
+
     var xmlHttpQuestNum = new XMLHttpRequest();
     var responseQuestNum;
     var questionNumber;
@@ -80,9 +88,9 @@ function showResult() {
 
     xmlHttpQuestNum.onload = function () {
         responseQuestNum = JSON.parse(xmlHttpQuestNum.response);
-
         questionNumber = responseQuestNum.resBody;
 
+        // retrieve quiz data
         var xhttp = new XMLHttpRequest();
         var response;
 
@@ -96,10 +104,15 @@ function showResult() {
             var corAns;
             var points = dataArray.points;
             var qType = dataArray.question_type;
+            var finalQuestion = numQuest == parseInt(questionNumber) + 1;
 
+            // LOGIC FOR HANDLING ANSWER PROVIDED
+
+            // if single and true/false type, then treat normally
             if (qType == 'multiplechoice-single' || qType == 'truefalse') {
                 corAns = dataArray.correct_answer;
 
+                // retrieve selected answer by user
                 var divAns = document.getElementById("answers");
                 var chks = divAns.getElementsByTagName("INPUT");
                 var selectedAns;
@@ -108,26 +121,25 @@ function showResult() {
                         selectedAns = chks[i].value;
                     }
                 }
-
+                
+                // determine selected and correct answers
                 var correct = qType == 'truefalse' ? corAns ? 1 : 0 : corAns;
                 var selected = qType == 'truefalse' ? selectedAns == 'True' ? 1 : 0 : parseInt(selectedAns);
-                var result = correct == selected;
+                var correctResult = correct == selected;
                 var correctId = qType == 'truefalse' ? correct ? "answer0" : "answer1" : "answer" + corAns;
                 var selectedId = qType == 'truefalse' ? selected ? "answer0" : "answer1" : "answer" + selected;
-                var finalQuestion = numQuest == parseInt(questionNumber) + 1;
 
-                if (result) {
-                    callMethod('PATCH', 'updatePoints', JSON.stringify(points));
-                }
-
-                if (result) {
+                updatePoints(correctResult, points);
+                if (correctResult) {
                     displayAnswerAndProceed(correctId, '', 3, finalQuestion);
                 } else {
                     displayAnswerAndProceed(correctId, selectedId, 3, finalQuestion);
                 }
+            // if multiple then retrieve array of selected options
             } else if (qType == 'multiplechoice-multiple') {
                 corAns = dataArray.correct_answer;
 
+                // retrieve selected answers by user
                 var divAns = document.getElementById("answers");
                 var chks = divAns.getElementsByTagName("INPUT");
                 var selectedAns = [];
@@ -141,7 +153,6 @@ function showResult() {
                 });
 
                 var correct = true;
-
                 for (var i = 0; i < filSelAns.length; i++) {
                     if (!corAns.includes(filSelAns[i])) {
                         correct = false;
@@ -149,10 +160,7 @@ function showResult() {
                     }
                 }
 
-                if (correct) {
-                    callMethod('PATCH', 'updatePoints', JSON.stringify(points));
-                }
-
+                updatePoints(correct, points);
                 if (correct) {
                     displayAnswerAndProceedArray(buildMultipleChoiceArray(corAns), '', 3, finalQuestion);
                 } else {
@@ -165,13 +173,10 @@ function showResult() {
                 }
 
             }
-
-
         };
         xhttp.send();
     };
     xmlHttpQuestNum.send(null);
-
 }
 
 function displayAnswerAndProceed(cid, sid, seconds, finalQuestion) {
@@ -271,6 +276,13 @@ function displayAnswerAndProceedArray(cid, sid, seconds, finalQuestion) {
         }, (seconds * 1000));
     };
     xmlHttpQuestNum.send(null);
+}
+
+function updatePoints(correct, points) {
+    // add up points
+    if (correct) {
+        callMethod('PATCH', 'updatePoints', JSON.stringify(points));
+    }
 }
 
 function callMethod(method, endpoint, body) {

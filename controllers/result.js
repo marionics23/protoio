@@ -21,7 +21,7 @@ function fillData() {
 
             var classes = response.results;
             
-            var totalPer = 100 * parseInt(finalPoints)/20;
+            var totalPer = (100 * parseInt(finalPoints))/20;
 
             var finalClass = classes.filter(function (el) {
                 return el.minpoints <= totalPer && el.maxpoints >= totalPer;
@@ -41,5 +41,5 @@ function fillData() {
 }
 
 function restartQuiz() {
-    location.href = "http://localhost:3000/";
+    location.href = "http://localhost:3000/views/home.html";
 }
